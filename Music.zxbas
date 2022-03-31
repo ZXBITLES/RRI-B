@@ -1,0 +1,536 @@
+sub fastcall InitMusicPlayer()
+ASM
+    push hl
+
+    ld hl,musicData_drums
+    ld (drumSynth_drumSettings),hl
+    ld a,musicData_insList/256
+    ld (readRow_insList0),a
+    ld (readRow_insList1),a
+
+    pop hl
+
+END ASM
+end sub
+
+
+
+sub fastcall PlayMusic(A as Ubyte)
+ASM
+    push hl
+    push bc
+    push de
+    push ix
+    push iy
+    exx
+    push hl
+    push de
+    push bc
+    push af
+
+    ld hl,readLoop
+    ld e,$ca
+    or a
+    jr z,toggle_loop
+    ld hl,stopPlayer
+    ld e,$d2                    ; enable/disable keyhandler, see below
+
+toggle_loop
+    ld (loop_enable),hl
+
+    pop af
+    ld hl,song_tab              ; set song ptr
+    add a,a
+    add a,l
+    ld l,a
+    ld a,(hl)
+    inc hl
+    ld h,(hl)
+    ld l,a
+    ld (readRow_pos),hl
+    ld (readLoop_loop),hl
+
+    ld a,e                      ; enable/disable keyhandler
+    ld (keyhand_enable),a
+
+    call play
+
+    pop bc
+    pop de
+    pop hl
+    exx
+    pop iy
+    pop ix
+    pop de
+    pop bc
+    pop hl
+    ret
+
+
+
+	;engine code
+
+OP_INCDE	equ $13
+OP_DECDE	equ $1b
+OP_DECHL	equ $2b
+OP_ANDH		equ $a4
+OP_XORH		equ $ac
+OP_ORC		equ $b1
+OP_ORH		equ $b4
+
+
+
+play
+	di
+	exx
+	;; push hl
+	;; push iy
+	ld (stopPlayer_oldSP),sp
+	exx
+
+	ld hl,0
+	ld (soundInit_ch0cnt0),hl
+	ld ix,0						;ch0cnt1
+	ld (readRow_ch1cnt0),hl
+	ld iy,0						;ch1cnt1
+	ld (soundInit_ch0add0),hl
+	ld sp,hl					;ch0add1
+	ld (readRow_ch1add0),hl
+	ld (readRow_ch1add1),hl
+	xor a
+	ld (readRow_ch0int),a
+	ld (readRow_ch1int),a
+	ld (readRow_ch0det),a
+	ld (readRow_ch1det),a
+	ld a,64
+	ld (readRow_ch0pha),a
+	ld (readRow_ch1pha),a
+	ld a,OP_XORH
+	ld (soundLoop_op0),a
+	ld (soundLoop_op1),a
+	ld hl,1000
+	ld (soundInit_len),hl
+	exx
+	ld hl,0						;ch1cnt0
+	ld de,0						;ch1add1
+	ld bc,0						;ch1add0
+	exx
+
+	in a,($1f)
+	and $1f
+	jr nz,$+4
+	ld a,OP_ORC
+	ld (readRow_enableKemp),a
+
+readRow
+readRow_pos equ $+1
+	ld hl,0
+readRow_read
+	ld a,(hl)
+	cp 245
+	jr z,readRow_setSpeed
+	cp 246
+	jp c,readRow_ch0
+	cp 254
+	jr z,readRow_setLoop
+	cp 255
+loop_enable equ $+1
+	jp z,readLoop
+	inc hl
+	ld (readRow_pos),hl
+	sub 246
+	jp drumSynth
+
+readRow_setSpeed
+	inc hl
+	ld e,(hl)
+	inc hl
+	ld d,(hl)
+	ld (soundInit_len),de
+	inc hl
+	jp readRow_read
+
+readRow_setLoop
+	inc hl
+	ld (readLoop_loop),hl
+	jp readRow_read
+
+readRow_ch0mute
+	ld sp,0
+	ld ix,0
+	ld (soundInit_ch0cnt0),sp
+	ld (soundInit_ch0add0),sp
+	jp readRow_ch1
+
+readRow_ch1mute
+	exx
+	ld hl,0
+	ld iy,0
+	ld d,h
+	ld e,h
+	ld b,h
+	ld c,h
+	exx
+	jp readRow_ch1skip
+
+readRow_ch0
+	inc hl
+	add a,a
+	jp z,readRow_ch1
+	jp nc,readRow_note0	;bit 7 is not set, it is a note
+
+	ex de,hl		;set instrument of channel 0
+readRow_insList0 equ $+1
+	ld h,0
+	ld l,a
+	ld a,(hl)
+	inc l
+	ld (readRow_ch0int),a
+	ld a,(hl)
+	inc l
+	ld (readRow_ch0pha),a
+	ld a,(hl)
+	ld (readRow_ch0det),a
+	inc l
+	ld a,(hl)
+	ld (soundLoop_op0),a
+	ex de,hl
+	ld a,(hl)
+	inc hl
+	add a,a
+
+readRow_note0
+	cp 2
+	jr z,readRow_ch0mute
+	ex de,hl		;then read note and check for channel two data
+	ld l,a
+	add a,a
+	jr nc,readRow_ch0pskip
+	ld ix,(soundInit_ch0cnt0)
+readRow_ch0pha equ $+1
+	ld a,0
+	add a,ixh
+	ld ixh,a
+	res 7,l
+readRow_ch0pskip
+	ld h,noteTable/256
+	ld c,(hl)
+	inc l
+	ld b,(hl)
+	ld (soundInit_ch0add0),bc
+readRow_ch0int equ $+1
+	ld a,0
+	add a,l
+	ld l,a
+	ld b,(hl)
+	dec l
+	ld c,(hl)
+readRow_ch0det equ $+1
+	ld hl,0
+	add hl,bc
+	ld sp,hl		;ch0add1
+	ex de,hl
+
+readRow_ch1
+	ld a,(hl)
+	inc hl
+	add a,a
+	jp z,readRow_ch1skip
+	jp nc,readRow_note1
+
+	ex de,hl		;set instrument of channel 1
+readRow_insList1 equ $+1
+	ld h,0
+	ld l,a
+	ld a,(hl)
+	inc l
+	ld (readRow_ch1int),a
+	ld a,(hl)
+	inc l
+	ld (readRow_ch1pha),a
+	ld a,(hl)
+	ld (readRow_ch1det),a
+	inc l
+	ld a,(hl)
+	ld (soundLoop_op1),a
+	ex de,hl
+	ld a,(hl)
+	inc hl
+	add a,a
+
+readRow_note1
+	cp 2
+	jp z,readRow_ch1mute
+	ex de,hl		;then read note and play a row
+	ld l,a
+	add a,a
+	jr nc,readRow_ch1pskip
+	ld iy,(readRow_ch1cnt0)
+readRow_ch1pha equ $+1
+	ld a,0
+	add a,iyh
+	ld iyh,a
+	res 7,l
+readRow_ch1pskip
+	ld h,noteTable/256
+	ld c,(hl)
+	inc l
+	ld b,(hl)
+	ld (readRow_ch1add0),bc
+readRow_ch1int equ $+1
+	ld a,0
+	add a,l
+	ld l,a
+	ld b,(hl)
+	dec l
+	ld c,(hl)
+readRow_ch1det equ $+1
+	ld hl,0
+	add hl,bc
+	ld (readRow_ch1add1),hl
+	ex de,hl
+	exx
+readRow_ch1cnt0 equ $+1
+	ld hl,0
+readRow_ch1add1 equ $+1
+	ld de,0
+readRow_ch1add0 equ $+1
+	ld bc,0
+	exx
+
+readRow_ch1skip
+	ld (readRow_pos),hl
+
+	in a,($1f)
+	ld c,a
+	xor a
+	in a,($fe)
+	cpl
+readRow_enableKemp equ $
+	or c
+	and $1f
+keyhand_enable
+	jp z,soundInit          ; ca = jp z (enabled), da = jp c (disabled)
+
+stopPlayer
+stopPlayer_oldSP equ $+1
+	ld sp,0
+	;; pop hl
+	;; exx
+	;; pop iy
+	ei
+	ret
+
+
+
+readLoop
+readLoop_loop equ $+1
+	ld hl,0
+	jp readRow_read
+
+
+
+soundInit
+soundInit_skip equ $+1
+	ld hl,0
+soundInit_len equ $+1
+	ld de,10000
+	ld a,h
+	or l
+	jp z,soundInit_noSkip
+	ld a,h
+	cp d
+	jr c,soundInit_skipHL
+	ld a,l
+	cp e
+	jr c,soundInit_skipHL
+	and a
+	sbc hl,de
+	ld (soundInit_skip),hl
+	jp readRow
+soundInit_skipHL
+	ex de,hl
+	sbc hl,de
+	jr nc,$+5		;a fix to skip drums when tempo is very high
+	ld hl,1
+	ex de,hl
+	ld hl,0
+	ld (soundInit_skip),hl
+soundInit_noSkip
+soundInit_ch0cnt0 equ $+1
+	ld hl,0
+soundInit_ch0add0 equ $+1
+	ld bc,200
+
+soundLoop
+	add hl,bc		;11
+	ld a,h			;4
+	add ix,sp		;15
+soundLoop_op0 equ $+1
+	xor ixh			;8
+	rla				;4
+	sbc a,a			;4
+	;; and 16			;7
+    and $f2
+	out ($fe),a		;11
+	exx				;4
+	add hl,bc		;11
+	ld a,h			;4
+	add iy,de		;15
+soundLoop_op1 equ $+1
+	xor iyh			;8
+	rla				;4
+	sbc a,a			;4
+	;; and 16			;7
+    and $f1
+	out ($fe),a		;11
+	exx				;4
+	dec de			;6
+	ld a,d			;4
+	or e			;4
+	jp nz,soundLoop	;10=160t
+
+	ld (soundInit_ch0cnt0),hl
+
+	jp readRow
+
+
+drumSynth
+	ld (drumSynth_prevIX),ix
+	ld (drumSynth_prevIY),iy
+
+	add a,a
+	ld b,a
+	add a,a
+	add a,a
+	add a,b
+	ld b,0
+	ld c,a
+drumSynth_drumSettings equ $+1
+	ld hl,0
+	add hl,bc
+	ld c,(hl)
+	inc hl
+	ld b,(hl)
+	inc hl
+	ld (soundInit_skip),bc
+	ld c,(hl)
+	inc hl
+	ld b,(hl)
+	inc hl
+	ld e,(hl)
+	inc hl
+	ld d,(hl)
+	inc hl
+	ld a,(hl)
+	inc hl
+	ld (drumSynth_toneSFreq),a
+	ld a,(hl)
+	inc hl
+	ld (drumSynth_toneSlide),a
+	ld a,(hl)
+	inc hl
+	ld (drumSynth_noiseFrq),a
+	ld a,(hl)
+	ld (drumSynth_noiseEnable),a
+
+	ld hl,0
+	ld ix,$0101
+	ld iy,0
+drumSynth_l0
+	add hl,de	;10
+	ld a,(iy+0)	;19
+	dec ixh		;8
+	jp nz,drumSynth_l1	;10
+drumSynth_noiseFrq equ $+2
+	ld ixh,1	;11
+	inc iy		;10
+	jp drumSynth_l2		;10
+drumSynth_l1
+	ld a,(iy+0)	;19
+	jr $+2		;12
+drumSynth_l2
+drumSynth_noiseEnable equ $+1
+	;; and 16		;7
+    and $ff
+	out ($fe),a	;11
+	dec ixl		;8
+	jp nz,drumSynth_l3	;10
+drumSynth_toneSFreq equ $+2
+	ld ixl,5	;11
+drumSynth_toneSlide equ $
+	dec hl		;6
+	jp drumSynth_l4		;10
+drumSynth_l3
+	jp $+3		;10
+	jp $+3		;10
+	ld a,0		;7
+drumSynth_l4
+	ld a,h		;4
+	rla			;4
+	sbc a,a		;4
+	;; and 16		;7
+    and $ff
+	out ($fe),a	;11
+	dec bc		;6
+	ld a,b		;4
+	or c		;4
+	jp nz,drumSynth_l0	;10=195t
+
+drumSynth_prevIX equ $+2
+	ld ix,0
+drumSynth_prevIY equ $+2
+	ld iy,0
+
+	jp readRow
+
+musicData_drums
+ dw 731,600,800
+ db 1,27,0,0
+ dw 1828,1500,1500
+ db 1,27,2,$ff
+ dw 121,100,0
+ db 0,43,1,$ff
+ dw 487,400,0
+ db 0,43,1,$ff
+
+	align 256
+
+noteTable
+
+	dw $0000,$0000
+	dw $00c3,$00cf,$00db,$00e9,$00f6,$0105,$0115,$0125,$0137,$0149,$015d,$0171
+	dw $0187,$019f,$01b7,$01d2,$01ed,$020b,$022a,$024b,$026e,$0293,$02ba,$02e3
+	dw $030f,$033e,$036f,$03a4,$03db,$0416,$0454,$0496,$04dc,$0526,$0574,$05c7
+	dw $061f,$067c,$06df,$0748,$07b7,$082c,$08a8,$092c,$09b8,$0a4c,$0ae9,$0b8f
+	dw $0c3f,$0cf9,$0dbf,$0e90,$0f6e,$1059,$1151,$1259,$1370,$1498,$15d2,$171e
+	dw $187e,$19f3,$1b7e,$1d20,$1edc,$20b2,$22a3,$24b3,$26e1,$2931,$2ba4,$2e3c
+	dw $30fc,$33e6,$36fc,$3a41,$3db8,$4164,$4547,$4966,$4dc3,$5263,$5748,$5c79
+	dw $61f9,$67cc,$6df8,$7483,$7b71,$82c8,$8a8f,$92cc,$9b86,$a4c6,$ae91,$b8f3
+	dw $0030,$0033,$0036,$003a,$003d,$0041,$0045,$0049,$004d,$0052,$0057,$005c ;lowest octaves
+	dw $0061,$0067,$006d,$0074,$007b,$0082,$008a,$0092,$009b,$00a4,$00ae,$00b8
+
+song_tab
+    dw main_tune
+    dw game_over
+
+        align 256
+    dw 0
+    dw 0
+musicData_insList
+ db 0,64,4,164
+ db 14,64,4,164
+ db 14,64,4,172
+ db 10,64,4,164
+
+        ;; align 256
+musicData
+main_tune
+#include "rr3-part2-main-cp.asm"
+game_over
+#include "rr3-part2-game-over.asm"
+
+
+
+END ASM
+end sub
