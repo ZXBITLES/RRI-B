@@ -1,0 +1,122 @@
+﻿SUB Environment()
+    POKE UINTEGER 23675, @enviroment
+    RETURN
+    enviroment:
+    ASM
+    DEFB 60,36,60,24,24,60,36,60 			; A door
+    DEFB 126,255,94,94,78,94,78,94	    	; B capsule top
+    DEFB 111,244,202,21,66,168,146,68		; C floor
+    DEFB 56,84,238,170,68,238,84,56 	 	; D brain
+    DEFB 78,86,78,86,74,70,255,126			; E capsule bottom
+    DEFB 0,126,66,0,0,126,66,0			 	; F stairs
+    DEFB 036,195,066,195,102,189,024,036 	; G life
+    DEFB 24,60,36,44,44,44,24,60 		 	; H ammo
+    DEFB 60,50,89,189,189,188,88,48 	 	; I grenade
+    DEFB 255,143,143,143,78,78,044,024 		; J shield
+    DEFB 157,74,182,185,71,186,209,173 		; K big brick
+    DEFB 0,0,0,0,120,183,239,223 			; L - Dead Right Part1 12
+    DEFB 0,0,0,0,0,001,231,255 				; M - Dead Right Part2 34
+    DEFB 0,0,0,0,0,128,231,255 				; N - Dead Left Part1 12
+    DEFB 0,0,0,0,30,237,247,251 			; O - Dead Left Part2 34
+	DEFB 0,0,254,124,56,16,0,0 				; P selector 
+	DEFB 220,115,72,166,16,66,8,33 			; Q lava
+	DEFB 255,129,161,129,129,255,245,255 	; R terminal
+	DEFB 0,171,0,171,0,0,0,0			 	; S terminal
+    END ASM
+END SUB
+
+SUB Environment2()
+    POKE UINTEGER 23675, @enviroment2
+    RETURN
+    enviroment2:
+    ASM
+    DEFB 128,64,128,128,64,128,192,128 	; A - Wall decor left
+	DEFB 128,192,96,160,160,0,192,160	; B - Wall decor left
+	DEFB 33,12,94,26,9,41,32,4			; C - Blood
+	
+	DEFB 0,0,4,8,17,18,16,60			; D - Logo
+	DEFB 0,0,64,32,16,144,16,120
+
+	DEFB 66,136,133,129,1,2,28,0
+	DEFB 132,34,66,2,0,128,112,0
+	
+	DEFB 128,64,192,192,128,0,128,64	; H - Wall decor left
+	DEFB 0,1,2,2,1,2,3,1				; I - Wall decor right
+	DEFB 1,3,6,5,5,0,3,5				; J - Wall decor right
+	DEFB 1,2,3,1,0,1,0,1				; K - Wall decor right
+	DEFB 1,2,3,5,6,3,2,1				; L - Wall decor right
+	DEFB 128,64,192,160,96,192,64,128	; M - Wall decor left
+
+	DEFB 247,246,229,245,245,14,255,0
+	DEFB 30,238,246,246,246,236,16,224
+	
+	DEFB 0,0,4,3,21,23,8,7				; P - Bug Logo
+	DEFB 0,0,32,192,168,232,16,224
+
+	DEFB 31,39,7,11,9,4,0,0
+	DEFB 248,228,224,208,144,32,0,0
+	
+	DEFB 0,0,0,234,42,68,138,234		; T - ZX
+
+    END ASM
+END SUB
+
+SUB Environment3()
+    POKE UINTEGER 23675, @enviroment3
+    RETURN
+    enviroment3:
+    ASM
+    DEFB 247,99,98,66,64,64,0,0				; A - decor 1
+	DEFB 223,222,92,76,12,12,8,8			; B - decor 2
+	DEFB 253,72,64,0,0,0,0,0				; C - decor 3
+	DEFB 187,33,81,16,0,0,0,0				; D - decor 4
+	DEFB 221,138,0,0,0,0,0,0				; E - decor 5
+
+	DEFB 0,3,4,8,14,111,180,243				; F - robo
+	DEFB 0,192,32,16,112,246,45,207
+	DEFB 109,13,20,24,40,40,124,214
+	DEFB 182,176,40,24,20,20,62,107
+
+	DEFB 0,0,4,8,17,18,16,60				; J biohazard
+	DEFB 0,0,64,32,16,144,16,120
+	DEFB 66,136,133,129,1,2,28,0 
+	DEFB 132,34,66,2,0,128,112,0
+
+	DEFB 217,24,146,184,108,132,150,0		; N 
+	DEFB 64,4,144,18,14,200,112,126			; O 
+	DEFB 16,1,59,13,7,115,153,24			; P 
+	DEFB 13,131,39,20,56,64,9,1				; Q 
+	DEFB 126,44,44,24,0,0,0,0				; R lamp
+	DEFB 26,188,88,42,34,8,64,1				; S blood
+	DEFB 0,127,127,65,127,65,127,65			; T box top
+    END ASM
+END SUB
+
+sub Achievement()
+	POKE UINTEGER 23675, @achievement
+	return
+    achievement:
+    ASM
+    DEFB 16,16,56,56,124,92,108,56 			; first blood 
+	DEFB 6,12,24,48,12,24,48,96				; strike from the sky
+	DEFB 0,36,118,56,28,110,36,0			; cancel 
+	DEFB 60,50,89,189,189,188,88,48  		; burn baby
+	DEFB 0,36,126,36,36,126,36,0			; stage	
+	DEFB 127,127,127,127,85,127,85,127		; F box bottom 
+	DEFB 0,124,222,92,92,92,222,124			; G barrel
+
+	DEFB 0,0,2,9,2,6,42,25					; H explose
+	DEFB 0,0,160,22,73,154,33,148
+	DEFB 0,0,32,200,164,80,148,169
+
+	DEFB 80,11,82,44,74,21,74,173
+	DEFB 173,40,210,76,178,74,148,67
+	DEFB 16,173,86,200,162,96,149,72
+
+	DEFB 170,19,48,13,10,3,1,0
+	DEFB 53,66,153,54,133,42,80,0
+	DEFB 72,166,40,194,152,32,208,0
+	END ASM
+end sub 
+
+
